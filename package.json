@@ -1,14 +1,14 @@
 {
-  "name": "typescript-oss-template",
+  "name": "discord-bot",
   "version": "0.0.1",
   "description": "TypeScript OSS template",
   "author": "Solufa <solufa2020@gmail.com>",
   "license": "MIT",
   "bin": "bin/index.js",
   "scripts": {
-    "dev": "npm run build && node bin/index.js",
+    "dev": "npm run build && node dist/index.js",
     "build": "npm run rimraf && tsc",
-    "rimraf": "node -e \"require('fs').rmdirSync('dist', { recursive: true })\"",
+    "rimraf": "node -e \"require('fs').existsSync('dist') && require('fs').rmdirSync('dist', { recursive: true })\"",
     "release": "standard-version --skip.tag",
     "release:major": "npm run release -- --release-as major",
     "release:minor": "npm run release -- --release-as minor",
@@ -17,6 +17,7 @@
     "lint:js": "eslint --ext .ts,.js --ignore-path .gitignore .",
     "lint:prettier": "prettier --ignore-path .gitignore --check \"./**/*.{ts,js}\"",
     "lint:fix": "npm run lint:js -- --fix && prettier --ignore-path .gitignore --write \"./**/*.{ts,js}\"",
+    "start": "node dist/index.js",
     "test": "jest",
     "typecheck": "tsc --noEmit"
   },
@@ -81,7 +82,10 @@
   "dependencies": {
     "@types/minimist": "^1.2.2",
     "chokidar": "^3.5.3",
-    "minimist": "^1.2.8"
+    "discord.js": "^14.11.0",
+    "dotenv": "^16.0.3",
+    "minimist": "^1.2.8",
+    "openai": "^3.2.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.1",
