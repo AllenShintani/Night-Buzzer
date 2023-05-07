@@ -19,10 +19,13 @@ const chatWithOpenai = (messages: ChatCompletionRequestMessage[]) =>
       temperature: 1,
       max_tokens: 4096
     })
-    .then(
-      completion =>
-        completion.data.choices[0].message?.content ?? 'ちょっと何言ってるかわからないですね'
-    )
+    .then(completion => {
+      const { message } = completion.data.choices[0];
+
+      return message
+        ? `${message.content}\n(${message.content.length}文字)`
+        : 'ちょっと何言ってるかわからないですね';
+    })
     .catch(err =>
       err.response ? `${err.response.status}: ${JSON.stringify(err.response.data)}` : err.message
     );
