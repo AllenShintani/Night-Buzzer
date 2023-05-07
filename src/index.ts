@@ -15,14 +15,17 @@ const chatWithOpenai = (messages: ChatCompletionRequestMessage[]) =>
         { role: 'system', content: 'あなたは日本の大学のコンピュータサイエンス学部の教授です。' },
         ...messages
       ],
-      frequency_penalty: 2,
-      temperature: 1
+      frequency_penalty: 1,
+      temperature: 1,
+      max_tokens: 4096
     })
     .then(
       completion =>
         completion.data.choices[0].message?.content ?? 'ちょっと何言ってるかわからないですね'
     )
-    .catch(err => (err.response ? `${err.response.status}: ${err.response.data}` : err.message));
+    .catch(err =>
+      err.response ? `${err.response.status}: ${JSON.stringify(err.response.data)}` : err.message
+    );
 
 const client = new Client({
   intents: [
@@ -68,9 +71,10 @@ client.once(Events.ClientReady, c => {
             content: trimContent(m.content)
           })
         )
-      ]).then(m => message.reply(m));
-
-      isTyping = false;
+      ]).then(m => {
+        isTyping = false;
+        return message.reply(m);
+      });
     } else if (message.mentions.users.has(c.user.id)) {
       const thread = await message.startThread({
         name: `${message.author.username} with フルーリオちゃん`
@@ -84,11 +88,10 @@ client.once(Events.ClientReady, c => {
         }
       })();
 
-      await chatWithOpenai([{ role: 'user', content: trimContent(message.content) }]).then(m =>
-        thread.send(m)
-      );
-
-      isTyping = false;
+      await chatWithOpenai([{ role: 'user', content: trimContent(message.content) }]).then(m => {
+        isTyping = false;
+        return thread.send(m);
+      });
     }
   });
 });
