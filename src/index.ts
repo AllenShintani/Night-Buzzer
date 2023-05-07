@@ -43,8 +43,6 @@ client.once(Events.ClientReady, c => {
     if (message.channel.isThread()) {
       if (message.channel.ownerId !== c.user.id) return;
 
-      message.channel.sendTyping();
-
       const [starter, messages] = await Promise.all([
         message.channel.fetchStarterMessage(),
         message.channel.messages
@@ -53,6 +51,14 @@ client.once(Events.ClientReady, c => {
       ]);
 
       if (!starter) return;
+
+      let isTyping = true;
+      (async () => {
+        // eslint-disable-next-line no-unmodified-loop-condition
+        while (isTyping) {
+          await message.channel.sendTyping();
+        }
+      })();
 
       await chatWithOpenai([
         { role: 'user', content: trimContent(starter.content) },
@@ -63,15 +69,26 @@ client.once(Events.ClientReady, c => {
           })
         )
       ]).then(m => message.reply(m));
+
+      isTyping = false;
     } else if (message.mentions.users.has(c.user.id)) {
       const thread = await message.startThread({
         name: `${message.author.username} with フルーリオちゃん`
       });
-      thread.sendTyping();
+
+      let isTyping = true;
+      (async () => {
+        // eslint-disable-next-line no-unmodified-loop-condition
+        while (isTyping) {
+          await thread.sendTyping();
+        }
+      })();
 
       await chatWithOpenai([{ role: 'user', content: trimContent(message.content) }]).then(m =>
         thread.send(m)
       );
+
+      isTyping = false;
     }
   });
 });
