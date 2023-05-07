@@ -7,7 +7,7 @@ config();
 const BOT_TOKEN = process.env.BOT_TOKEN ?? '';
 const OPENAI_KEY = process.env.OPENAI_KEY ?? '';
 const openai = new OpenAIApi(new Configuration({ apiKey: OPENAI_KEY }));
-const chatWithOpenai = (messages: ChatCompletionRequestMessage[]) =>
+const chatWithOpenai = (messages: ChatCompletionRequestMessage[]): Promise<string[]> =>
   openai
     .createChatCompletion({
       model: 'gpt-4',
@@ -16,19 +16,28 @@ const chatWithOpenai = (messages: ChatCompletionRequestMessage[]) =>
         ...messages
       ],
       frequency_penalty: 1,
-      temperature: 1,
-      max_tokens: 4096
+      temperature: 1
     })
     .then(completion => {
       const { message } = completion.data.choices[0];
 
-      return message
-        ? `${message.content}\n(${message.content.length}文字)`
-        : 'ちょっと何言ってるかわからないですね';
+      if (!message) return ['ちょっと何言ってるかわからないですね'];
+
+      const list: string[] = [];
+      const textLength = 1900;
+
+      while (list.length * textLength < message.content.length) {
+        list.push(message.content.slice(list.length * textLength, (list.length + 1) * textLength));
+      }
+
+      return [
+        ...(list.length > 1 ? list.slice(0, -1) : []),
+        `${list.slice(-1)[0]}\n(${message.content.length}文字)`
+      ];
     })
-    .catch(err =>
+    .catch(err => [
       err.response ? `${err.response.status}: ${JSON.stringify(err.response.data)}` : err.message
-    );
+    ]);
 
 const client = new Client({
   intents: [
@@ -74,9 +83,12 @@ client.once(Events.ClientReady, c => {
             content: trimContent(m.content)
           })
         )
-      ]).then(m => {
+      ]).then(async list => {
         isTyping = false;
-        return message.reply(m);
+
+        for (const m of list) {
+          await message.reply(m);
+        }
       });
     } else if (message.mentions.users.has(c.user.id)) {
       const thread = await message.startThread({
@@ -91,10 +103,15 @@ client.once(Events.ClientReady, c => {
         }
       })();
 
-      await chatWithOpenai([{ role: 'user', content: trimContent(message.content) }]).then(m => {
-        isTyping = false;
-        return thread.send(m);
-      });
+      await chatWithOpenai([{ role: 'user', content: trimContent(message.content) }]).then(
+        async list => {
+          isTyping = false;
+
+          for (const m of list) {
+            await thread.send(m);
+          }
+        }
+      );
     }
   });
 });
