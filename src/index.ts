@@ -1,14 +1,20 @@
 import { Client, Events, GatewayIntentBits, MessageType } from 'discord.js';
 import { config } from 'dotenv';
 import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai';
+import { setTimeout } from 'timers/promises';
 
 config();
 
 const BOT_TOKEN = process.env.BOT_TOKEN ?? '';
 const OPENAI_KEY = process.env.OPENAI_KEY ?? '';
 const openai = new OpenAIApi(new Configuration({ apiKey: OPENAI_KEY }));
-const chatWithOpenai = (messages: ChatCompletionRequestMessage[]): Promise<string[]> =>
-  openai
+
+let chatCounter = 0;
+const chatWithOpenai = (messages: ChatCompletionRequestMessage[]): Promise<string[]> => {
+  chatCounter += 1;
+  console.log(`${chatCounter}件考え中...`);
+
+  return openai
     .createChatCompletion({
       model: 'gpt-4',
       messages: [
@@ -37,7 +43,12 @@ const chatWithOpenai = (messages: ChatCompletionRequestMessage[]): Promise<strin
     })
     .catch(err => [
       err.response ? `${err.response.status}: ${JSON.stringify(err.response.data)}` : err.message
-    ]);
+    ])
+    .finally(() => {
+      chatCounter -= 1;
+      console.log(`${chatCounter}件考え中...`);
+    });
+};
 
 const client = new Client({
   intents: [
@@ -72,16 +83,20 @@ client.once(Events.ClientReady, c => {
         // eslint-disable-next-line no-unmodified-loop-condition
         while (isTyping) {
           await message.channel.sendTyping();
+          await setTimeout(2000);
         }
       })();
 
       await chatWithOpenai([
         { role: 'user', content: trimContent(starter.content) },
         ...messages.map(
-          (m): ChatCompletionRequestMessage => ({
-            role: m.author.id === c.user.id ? 'assistant' : 'user',
-            content: trimContent(m.content)
-          })
+          (m): ChatCompletionRequestMessage =>
+            m.author.id === c.user.id
+              ? {
+                  role: 'assistant',
+                  content: trimContent(m.content.replace(/\\n\(\d+文字\)$/, ''))
+                }
+              : { role: 'user', content: trimContent(m.content) }
         )
       ]).then(async list => {
         isTyping = false;
@@ -100,6 +115,7 @@ client.once(Events.ClientReady, c => {
         // eslint-disable-next-line no-unmodified-loop-condition
         while (isTyping) {
           await thread.sendTyping();
+          await setTimeout(2000);
         }
       })();
 
