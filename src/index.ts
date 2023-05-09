@@ -12,7 +12,7 @@ const openai = new OpenAIApi(new Configuration({ apiKey: OPENAI_KEY }));
 let chatCounter = 0;
 const chatWithOpenai = (messages: ChatCompletionRequestMessage[]): Promise<string[]> => {
   chatCounter += 1;
-  console.log(`${chatCounter}件考え中...`);
+  console.log(`${chatCounter}件考え中... ${new Date().toLocaleString()}`);
 
   return openai
     .createChatCompletion({
@@ -46,7 +46,7 @@ const chatWithOpenai = (messages: ChatCompletionRequestMessage[]): Promise<strin
     ])
     .finally(() => {
       chatCounter -= 1;
-      console.log(`${chatCounter}件考え中...`);
+      console.log(`${chatCounter}件考え中... ${new Date().toLocaleString()}`);
     });
 };
 
@@ -94,7 +94,7 @@ client.once(Events.ClientReady, c => {
             m.author.id === c.user.id
               ? {
                   role: 'assistant',
-                  content: trimContent(m.content.replace(/\\n\(\d+文字\)$/, ''))
+                  content: trimContent(m.content.replace(/\n\(\d+文字\)$/, ''))
                 }
               : { role: 'user', content: trimContent(m.content) }
         )
