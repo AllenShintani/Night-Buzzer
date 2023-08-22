@@ -1,3 +1,6 @@
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import {
   ChannelType,
   Client,
@@ -9,6 +12,10 @@ import {
 } from 'discord.js';
 import { APPLICATION_ID, BOT_TOKEN, GUILD_ID, SOLUFA_CHANNEL_ID } from './envValues';
 import { fetchAll } from './fetchMany';
+
+dayjs.extend(utc);
+
+const toJST = (day: Dayjs) => day.utc().add(9, 'hour');
 
 const command = new SlashCommandBuilder()
   .setName('solufa')
@@ -43,16 +50,21 @@ export const commandAction = (client: Client<true>) => {
 
     const data = messages
       .filter(m => /<@\d+?>.*?\d+件.*?\d+行/s.test(m.content))
-      .map(m => m.content.match(/<@(\d+?)>.*?(\d+)件.*?(\d+)行/s)!)
+      .map(m => ({
+        regs: m.content.match(/<@(\d+?)>.*?(\d+)件.*?(\d+)行/s)!,
+        timestamp: m.createdTimestamp
+      }))
       .reduce(
         (
-          dict: Record<string, { pr: number; line: number; count: number }>,
-          [_, userId, pr, line]
+          dict: Record<string, { pr: number; line: number; dates: number[] }>,
+          { regs: [_, userId, pr, line], timestamp }
         ) => {
-          const newDict = { ...dict, [userId]: dict[userId] ?? { pr: 0, line: 0, count: 0 } };
+          const newDict = { ...dict, [userId]: dict[userId] ?? { pr: 0, line: 0, dates: [] } };
           newDict[userId].pr += +pr;
           newDict[userId].line += +line;
-          newDict[userId].count += 1;
+
+          const date = toJST(dayjs(timestamp)).startOf('day').unix();
+          !newDict[userId].dates.includes(date) && newDict[userId].dates.push(date);
 
           return newDict;
         },
@@ -81,9 +93,9 @@ export const commandAction = (client: Client<true>) => {
           color: 0x1ecdcb,
           fields: result.map((r, i) => ({
             name: `${i + 1}位 ${r.name}`,
-            value: `${r.count}日間 PR${r.pr}件 ${r.line}行\n1日平均 PR${(r.pr / r.count).toFixed(
-              1
-            )}件 ${(r.line / r.count).toFixed(1)}行`
+            value: `${r.dates.length}日間 PR${r.pr}件 ${r.line}行\n1日平均 PR${(
+              r.pr / r.dates.length
+            ).toFixed(1)}件 ${(r.line / r.dates.length).toFixed(1)}行`
           }))
         }
       ]
