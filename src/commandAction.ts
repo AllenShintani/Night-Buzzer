@@ -93,7 +93,7 @@ export const commandAction = (client: Client<true>) => {
           color: 0x1ecdcb,
           fields: result.map((r, i) => ({
             name: `${i + 1}位 ${r.name}`,
-            value: `${r.dates.length}日間 PR${r.pr}件 ${r.line}行\n1日平均 PR${(
+            value: `${r.dates.length}日間 PR${r.pr}件 ${r.line.toLocaleString()}行\n1日平均 PR${(
               r.pr / r.dates.length
             ).toFixed(1)}件 ${(r.line / r.dates.length).toFixed(1)}行`
           }))
