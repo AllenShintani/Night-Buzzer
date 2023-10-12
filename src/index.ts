@@ -1,7 +1,6 @@
 import { Client, Events, GatewayIntentBits } from 'discord.js';
-import { commandAction } from './commandAction';
 import { BOT_TOKEN } from './envValues';
-import { gpt4Action } from './gpt4Action';
+import { nightBuzzer } from './nightBuzzer';
 
 const client = new Client({
   intents: [
@@ -13,9 +12,7 @@ const client = new Client({
 
 client.once(Events.ClientReady, c => {
   console.log(`${c.user.username} ready.`);
-
-  gpt4Action(c);
-  commandAction(c);
+  nightBuzzer(c);
 });
 
 client.login(BOT_TOKEN);
